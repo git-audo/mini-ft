@@ -1,4 +1,3 @@
-//#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
@@ -24,7 +23,7 @@ int main (int argc, char *argv[])
     int backlog = 4;
     socklen_t alen;
     struct sockaddr_in s_addr, c_addr;
-    int cpid;
+    int child_pid;
 
     if(argc != 2){
 	printf("Wrong number of arguments, specify port number\n");
@@ -56,7 +55,7 @@ int main (int argc, char *argv[])
 
     pass_socket = socket;
 
-    printf("File transfer server started - listening for connections\n");
+    printf("File transfer server started - listening for connections ..\n");
 
     for(;;){
 	alen = sizeof(struct sockaddr_in);
@@ -67,16 +66,16 @@ int main (int argc, char *argv[])
 
 	showAddr("\nClient connected", &c_addr);
 
-	if((cpid = fork()) < 0){
+	if((child_pid = fork()) < 0){
 	    err_msg("failed to execute fork");
 	    close(socket);
-	} else if(cpid == 0){
+	} else if(child_pid == 0){
 	    close(pass_socket);
 	    transferFiles(socket);
 	    exit(1);
 	} else {
 	    close(socket);
-	    printf("New process serving client\n");
+	    printf(" Process %d serving client\n Listening for new connections ..\n", child_pid);
 	}
     }
 }
@@ -84,7 +83,7 @@ int main (int argc, char *argv[])
 void childHandler(int signal){
     pid_t child;
     child = wait(NULL);
-    printf("Child process ended %d\n", child);    
+    printf(" - Connection managed by process %d ended\n", child);    
 }
 
 void transferFiles(int socket){
@@ -126,7 +125,7 @@ void transferFiles(int socket){
 
 	memset(filename, 0, NAMELEN);
 	strncpy(filename, buff+4, n-6);
-	printf(" %s", filename);
+	printf("  %s", filename);
 	fflush(stdout);
 
 	if(strstr(filename, "../") != NULL){
@@ -225,5 +224,4 @@ void transferFiles(int socket){
     }
 
     close(socket);
-    printf("Connection ended\n");
 }
