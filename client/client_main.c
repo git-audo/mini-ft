@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
-#include "../errlib.h"
-#include "../sockwrap.h"
+#include "../libs/errlib.h"
+#include "../libs/sockwrap.h"
 
 #define FILELEN 128
 #define BUFFSIZE 128
