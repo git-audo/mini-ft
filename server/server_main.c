@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 #include <signal.h>
 #include <sys/wait.h>
+#include <pthread.h>
 #include "../libs/errlib.h"
 #include "../libs/sockwrap.h"
 
@@ -12,6 +13,8 @@
 #define NAMELEN 128
 
 char *prog_name;
+
+pthread_mutex_t file_lock = PTHREAD_MUTEX_INITIALIZER;
 
 void transferFiles(int socket);
 void childHandler(int signal);
@@ -241,7 +244,11 @@ void transferFiles(int socket){
 
 void log_event(char *message) {
     FILE *logs;
+    pthread_mutex_lock(&file_lock);
+
     logs = fopen("logs.txt", "a");
     fprintf(logs, message);
     fclose(logs);
+    
+    pthread_mutex_unlock(&file_lock);
 }
