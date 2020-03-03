@@ -15,6 +15,7 @@ char *prog_name;
 
 void transferFiles(int socket);
 void childHandler(int signal);
+void log_event(char *message);
 
 int main (int argc, char *argv[])
 {
@@ -75,7 +76,7 @@ int main (int argc, char *argv[])
 	    exit(1);
 	} else {
 	    close(socket);
-	    printf(" Process %d serving client\n Listening for new connections ..\n", child_pid);
+	    printf("Process %d serving client\nListening for new connections ..\n", child_pid);
 	}
     }
 }
@@ -83,7 +84,11 @@ int main (int argc, char *argv[])
 void childHandler(int signal){
     pid_t child;
     child = wait(NULL);
-    printf(" - Connection managed by process %d ended\n", child);    
+    
+    char message[NAMELEN];
+    memset(message, 0, NAMELEN);	        
+    snprintf(message, NAMELEN, "Proc %d: client connection ended\n", child);
+    log_event(message);    	    
 }
 
 void transferFiles(int socket){
@@ -100,6 +105,9 @@ void transferFiles(int socket){
 
     char error_mess[7] = "\0";
     snprintf(error_mess, 7, "-ERR\r\n");
+
+    char message[NAMELEN];
+    memset(message, 0, NAMELEN);	    
     
     for(;;){
 
@@ -125,11 +133,11 @@ void transferFiles(int socket){
 
 	memset(filename, 0, NAMELEN);
 	strncpy(filename, buff+4, n-6);
-	printf("  %s", filename);
-	fflush(stdout);
+	//	printf("  %s", filename);
+	//	fflush(stdout);
 
 	if(strstr(filename, "../") != NULL){
-	    printf(" - file not in working directory\n");
+	    printf(" %s - file not in working directory\n", filename);
 	    n = send(socket, error_mess, 6, MSG_NOSIGNAL);
 	    break;
 	}
@@ -138,7 +146,9 @@ void transferFiles(int socket){
 	struct stat stat_buf;
 	stat(filename, &stat_buf);
 	if(!S_ISREG(stat_buf.st_mode)){
-	    printf(" - file not available\n");
+	    snprintf(message, NAMELEN, "Proc %d: %s - file not available\n", getpid(), filename);
+	    log_event(message);
+	    
 	    n = select(FD_SETSIZE, NULL, &cset, NULL, &tv);
 	    if(n>0){
 		n = send(socket, error_mess, 6, MSG_NOSIGNAL);
@@ -151,7 +161,9 @@ void transferFiles(int socket){
 
 	fp = fopen(filename, "rb");
 	if(fp == NULL){
-	    printf(" - file not available\n");
+	    snprintf(message, NAMELEN, "Proc %d: %s - file not available\n", getpid(), filename);
+	    log_event(message);
+	    
 	    n = select(FD_SETSIZE, NULL, &cset, NULL, &tv);
 	    if(n>0){
 		n = send(socket, error_mess, 6, MSG_NOSIGNAL);
@@ -207,7 +219,8 @@ void transferFiles(int socket){
 	    }
 	}
 
-	printf(" - transfered\n");
+	snprintf(message, NAMELEN, "Proc %d: %s - file transfered\n", getpid(), filename);
+	log_event(message);
 	
 	FD_SET(socket, &cset);
 	n = select(FD_SETSIZE, NULL, &cset, NULL, &tv);
@@ -224,4 +237,11 @@ void transferFiles(int socket){
     }
 
     close(socket);
+}
+
+void log_event(char *message) {
+    FILE *logs;
+    logs = fopen("logs.txt", "a");
+    fprintf(logs, message);
+    fclose(logs);
 }
